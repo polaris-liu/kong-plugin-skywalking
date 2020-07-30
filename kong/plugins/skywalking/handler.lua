@@ -13,11 +13,11 @@ function SkyWalkingHandler:new()
   kong.log.debug("saying hi from the SkyWalkingHandler 'new' handler")
   local metadata_buffer = ngx.shared.tracing_buffer
   local service_name = "User Service Name"
-  local service_instanceName = "User Service Instance Name"
+  local service_instance_name = "User Service Instance Name"
   local backend_http_uri = "http://192.168.9.9:11800"
 
   metadata_buffer:set('serviceName', service_name)
-  metadata_buffer:set('serviceInstanceName', service_instanceName)
+  metadata_buffer:set('serviceInstanceName', service_instance_name)
 
   client:startBackendTimer(backend_http_uri) 
 
@@ -27,9 +27,9 @@ end
 
 function SkyWalkingHandler:rewrite(config)
   kong.log.debug("saying hi from the SkyWalkingHandler 'rewrite' handler")
-  local service_name = "temp node"
-  tracer:start(service_name)
-  ngx.log(ngx.DEBUG, 'SkyWalkingHandler rewrite ', service_name)
+  local service_path_name = "temp node"
+  tracer:start(service_path_name)
+  ngx.log(ngx.DEBUG, 'SkyWalkingHandler rewrite ', service_path_name)
 end
 
 function SkyWalkingHandler:body_filter(config)
