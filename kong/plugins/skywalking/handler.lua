@@ -1,7 +1,7 @@
 local client = require "kong.plugins.skywalking.client"
 local tracer = require "kong.plugins.skywalking.tracer"
 
-local SkyWalkingHandler = = {
+local SkyWalkingHandler = {
   PRIORITY = 2001,
   VERSION = "1.0.0",
 }
