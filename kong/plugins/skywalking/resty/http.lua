@@ -1,4 +1,4 @@
-local http_headers = require "resty.http_headers"
+local http_headers = require "kong.plugins.skywalking.resty.http_headers"
 
 local ngx = ngx
 local ngx_socket_tcp = ngx.socket.tcp

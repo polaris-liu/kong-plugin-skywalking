@@ -16,9 +16,9 @@
 --
 
 local lu = require('luaunit')
-local TC = require('tracing_context')
-local Segment = require('segment')
-local Span = require('span')
+local TC = require('kong.plugins.skywalking.tracing_context')
+local Segment = require('kong.plugins.skywalking.segment')
+local Span = require('kong.plugins.skywalking.span')
 
 TestTracingContext = {}
     function TestTracingContext:testNew()

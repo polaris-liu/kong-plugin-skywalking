@@ -15,9 +15,9 @@
 -- limitations under the License.
 --
 
-local Util = require('util')
-local Span = require('span')
-local CorrelationContext = require('correlation_context')
+local Util = require('kong.plugins.skywalking.util')
+local Span = require('kong.plugins.skywalking.span')
+local CorrelationContext = require('kong.plugins.skywalking.correlation_context')
 
 local CONTEXT_CORRELATION_KEY = 'sw8-correlation'
 

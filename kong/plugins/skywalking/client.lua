@@ -71,14 +71,14 @@ function Client:reportServiceInstance(metadata_buffer, backend_http_uri)
     local serviceInstanceName = metadata_buffer:get('serviceInstanceName')
 
     local cjson = require('cjson')
-    local reportInstance = require("management").newReportInstanceProperties(serviceName, serviceInstanceName)
+    local reportInstance = require("kong.plugins.skywalking.management").newReportInstanceProperties(serviceName, serviceInstanceName)
     local reportInstanceParam, err = cjson.encode(reportInstance)
     if err then
         log(ERR, "Request to report instance fails, ", err)
         return
     end
 
-    local http = require('resty.http')
+    local http = require('kong.plugins.skywalking.resty.http')
     local httpc = http.new()
     local res, err = httpc:request_uri(backend_http_uri .. '/v3/management/reportProperties', {
         method = "POST",
@@ -108,13 +108,13 @@ function Client:ping(metadata_buffer, backend_http_uri)
     local serviceInstanceName = metadata_buffer:get('serviceInstanceName')
 
     local cjson = require('cjson')
-    local pingPkg = require("management").newServiceInstancePingPkg(serviceName, serviceInstanceName)
+    local pingPkg = require("kong.plugins.skywalking.management").newServiceInstancePingPkg(serviceName, serviceInstanceName)
     local pingPkgParam, err = cjson.encode(pingPkg)
     if err then
         log(ERR, "Agent ping fails, ", err)
     end
 
-    local http = require('resty.http')
+    local http = require('kong.plugins.skywalking.resty.http')
     local httpc = http.new()
     local res, err = httpc:request_uri(backend_http_uri .. '/v3/management/keepAlive', {
         method = "POST",
@@ -139,7 +139,7 @@ local function sendSegments(segmentTransform, backend_http_uri)
     local DEBUG = ngx.DEBUG
     local ERR = ngx.ERR
 
-    local http = require('resty.http')
+    local http = require('kong.plugins.skywalking.resty.http')
     local httpc = http.new()
 
     local res, err = httpc:request_uri(backend_http_uri .. '/v3/segments', {
