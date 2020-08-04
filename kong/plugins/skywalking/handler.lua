@@ -1,47 +1,64 @@
-local client = require "kong.plugins.skywalking.client"
-local tracer = require "kong.plugins.skywalking.tracer"
+--
+-- Licensed to the Apache Software Foundation (ASF) under one or more
+-- contributor license agreements.  See the NOTICE file distributed with
+-- this work for additional information regarding copyright ownership.
+-- The ASF licenses this file to You under the Apache License, Version 2.0
+-- (the "License"); you may not use this file except in compliance with
+-- the License.  You may obtain a copy of the License at
+--
+--     http://www.apache.org/licenses/LICENSE-2.0
+--
+-- Unless required by applicable law or agreed to in writing, software
+-- distributed under the License is distributed on an "AS IS" BASIS,
+-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-- See the License for the specific language governing permissions and
+-- limitations under the License.
+--
+
+local sw_client = require "kong.plugins.skywalking.client"
+local sw_tracer = require "kong.plugins.skywalking.tracer"
 
 local SkyWalkingHandler = {
   PRIORITY = 2001,
   VERSION = "1.0.0",
 }
 
--- Your plugin handler's constructor. If you are extending the
--- Base Plugin handler, it's only role is to instantiate itself
--- with a name. The name is your plugin name as it will be printed in the logs.
-function SkyWalkingHandler:new()
-  kong.log.debug("saying hi from the SkyWalkingHandler 'new' handler")
-  local metadata_buffer = ngx.shared.tracing_buffer
-  local service_name = "User Service Name"
-  local service_instance_name = "User Service Instance Name"
-  local backend_http_uri = "http://192.168.9.9:11800"
+-- function SkyWalkingHandler:init_worker()
+--   kong.log.debug("saying hi from the SkyWalkingHandler 'new' handler")
+--   local metadata_buffer = ngx.shared.skywalking_tracing_buffer
+--   local service_name = config.service_name
+--   local service_instance_name = config.service_instance_name
+--   local backend_http_uri = config.backend_http_uri
 
-  metadata_buffer:set('serviceName', service_name)
-  metadata_buffer:set('serviceInstanceName', service_instance_name)
+--   metadata_buffer:set('serviceName', service_name)
+--   metadata_buffer:set('serviceInstanceName', service_instance_name)
 
-  client:startBackendTimer(backend_http_uri) 
+--   sw_client:startBackendTimer(backend_http_uri) 
 
-  ngx.log(ngx.DEBUG, 'SkyWalkingHandler init ', metadata_buffer)
-  ngx.log(ngx.DEBUG, 'SkyWalkingHandler serverAddr ', backend_http_uri)
-end
+--   kong.log.debug('SkyWalkingHandler init ', metadata_buffer)
+--   kong.log.debug('SkyWalkingHandler serverAddr ', backend_http_uri)
+-- end
 
-function SkyWalkingHandler:rewrite(config)
-  kong.log.debug("saying hi from the SkyWalkingHandler 'rewrite' handler")
-  local service_path_name = "temp node"
-  tracer:start(service_path_name)
-  ngx.log(ngx.DEBUG, 'SkyWalkingHandler rewrite ', service_path_name)
+function SkyWalkingHandler:access(config)
+  kong.log.info('access phase of skywalking plugin')
+  kong.ctx.plugin.skywalking_sample = false
+  if config.sample_ratio == 1 or math.random() * 10000 < config.sample_ratio then
+      kong.ctx.plugin.skywalking_sample = true
+      sw_client:startBackendTimer(config) 
+      sw_tracer:start(config)
+  end
 end
 
 function SkyWalkingHandler:body_filter(config)
-  kong.log.debug("saying hi from the SkyWalkingHandler 'body_filter' handler")
-  if ngx.arg[2] then
-    tracer:finish()
+  if kong.ctx.plugin.skywalking_sample and ngx.arg[2] then
+    sw_tracer:finish()
   end
 end
 
 function SkyWalkingHandler:log(config)
-  kong.log.debug("saying hi from the SkyWalkingHandler 'log' handler")
-  tracer:prepareForReport()
+  if kong.ctx.plugin.skywalking_sample then
+    sw_tracer:prepareForReport()
+  end
 end
 
 return SkyWalkingHandler

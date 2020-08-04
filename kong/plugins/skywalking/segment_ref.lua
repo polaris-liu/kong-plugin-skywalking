@@ -14,15 +14,9 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 --
-local Util = require('kong.plugins.skywalking.util')
-local Base64 = require('kong.plugins.skywalking.dependencies.base64')
-local encode_base64 = Base64.encode
-local decode_base64 = Base64.decode
-
-if Util.is_ngx_lua then
-    encode_base64 = ngx.encode_base64
-    decode_base64 = ngx.decode_base64
-end
+local k_utils = require "kong.tools.utils"
+local encode_base64 = ngx.encode_base64
+local decode_base64 = ngx.decode_base64
 
 local _M = {}
 -- local SegmentRef = {
@@ -47,7 +41,7 @@ end
 function _M.fromSW8Value(value)
     local ref = _M.new()
 
-    local parts = Util.split(value, '-')
+    local parts = k_utils.split(value, '-')
     if #parts ~= 8 then
         return nil
     end

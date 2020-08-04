@@ -19,15 +19,9 @@
 local ELEMENT_MAX_NUMBER = 3
 local VALUE_MAX_LENGTH = 128
 
-local Util = require('kong.plugins.skywalking.util')
-local Base64 = require('kong.plugins.skywalking.dependencies.base64')
-local encode_base64 = Base64.encode
-local decode_base64 = Base64.decode
-
-if Util.is_ngx_lua then
-    encode_base64 = ngx.encode_base64
-    decode_base64 = ngx.decode_base64
-end
+local k_utils = require "kong.tools.utils"
+local encode_base64 = ngx.encode_base64
+local decode_base64 = ngx.decode_base64
 
 local _M = {}
 
@@ -43,7 +37,7 @@ function _M.fromSW8Value(value)
         return context
     end
 
-    local data = Util.split(value, ',')
+    local data = k_utils.split(value, ',')
     if #data == 0 then
         return context
     end
@@ -54,7 +48,7 @@ function _M.fromSW8Value(value)
             return context
         end
 
-        local parts = Util.split(per_data, ':')
+        local parts = k_utils.split(per_data, ':')
         if #parts == 2 then
             local key = decode_base64(parts[1])
             local value = decode_base64(parts[2])

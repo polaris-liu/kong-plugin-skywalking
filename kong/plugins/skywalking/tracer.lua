@@ -15,18 +15,19 @@
 -- limitations under the License.
 --
 local Span = require('kong.plugins.skywalking.span')
+local kong = kong
 
 local Tracer = {}
 
-function Tracer:start(upstream_name, correlation)
+function Tracer:start(config, correlation)
     local metadata_buffer = ngx.shared.skywalking_tracing_buffer
     local TC = require('kong.plugins.skywalking.tracing_context')
     local Layer = require('kong.plugins.skywalking.span_layer')
 
     local tracingContext
-    local serviceName = metadata_buffer:get("serviceName")
-    local serviceInstanceName = metadata_buffer:get('serviceInstanceName')
-    tracingContext = TC.new(serviceName, serviceInstanceName)
+    local service_name = config.service_name
+    local service_instance_name = config.service_instance_name
+    tracingContext = TC.new(service_name, service_instance_name)
 
     -- Constant pre-defined in SkyWalking main repo
     -- 6000 represents Nginx
@@ -40,15 +41,15 @@ function Tracer:start(upstream_name, correlation)
     Span.setComponentId(entrySpan, nginxComponentId)
     Span.setLayer(entrySpan, Layer.HTTP)
 
-    Span.tag(entrySpan, 'http.method', ngx.req.get_method())
-    Span.tag(entrySpan, 'http.params', ngx.var.scheme .. '://' .. ngx.var.host .. ngx.var.request_uri )
+    Span.tag(entrySpan, 'http.method', kong.request.get_method())
+    Span.tag(entrySpan, 'http.params', kong.request.get_scheme() .. '://' .. kong.request.get_host() .. ':' .. kong.request.get_port() .. kong.request.get_path_with_query())
 
     contextCarrier = {}
     -- Use the same URI to represent incoming and forwarding requests
     -- Change it if you need.
     local upstreamUri = ngx.var.uri
 
-    local upstreamServerName = upstream_name
+    local upstreamServerName = kong.request.get_host()
     ------------------------------------------------------
     local exitSpan = TC.createExitSpan(tracingContext, upstreamUri, entrySpan, upstreamServerName, contextCarrier, correlation)
     Span.start(exitSpan, ngx.now() * 1000)
@@ -60,25 +61,25 @@ function Tracer:start(upstream_name, correlation)
     end
 
     -- Push the data in the context
-    ngx.ctx.tracingContext = tracingContext
-    ngx.ctx.entrySpan = entrySpan
-    ngx.ctx.exitSpan = exitSpan
+    kong.ctx.plugin.tracingContext = tracingContext
+    kong.ctx.plugin.entrySpan = entrySpan
+    kong.ctx.plugin.exitSpan = exitSpan
 end
 
 function Tracer:finish()
     -- Finish the exit span when received the first response package from upstream
-    if ngx.ctx.exitSpan ~= nil then
-        Span.finish(ngx.ctx.exitSpan, ngx.now() * 1000)
-        ngx.ctx.exitSpan = nil
+    if kong.ctx.plugin.exitSpan ~= nil then
+        Span.finish(kong.ctx.plugin.exitSpan, ngx.now() * 1000)
+        kong.ctx.plugin.exitSpan = nil
     end
 end
 
 function Tracer:prepareForReport()
     local TC = require('kong.plugins.skywalking.tracing_context')
     local Segment = require('kong.plugins.skywalking.segment')
-    if ngx.ctx.entrySpan ~= nil then
-        Span.finish(ngx.ctx.entrySpan, ngx.now() * 1000)
-        local status, segment = TC.drainAfterFinished(ngx.ctx.tracingContext)
+    if kong.ctx.plugin.entrySpan ~= nil then
+        Span.finish(kong.ctx.plugin.entrySpan, ngx.now() * 1000)
+        local status, segment = TC.drainAfterFinished(kong.ctx.plugin.tracingContext)
         if status then
             local segmentJson = require('cjson').encode(Segment.transform(segment))
             ngx.log(ngx.DEBUG, 'segment = ', segmentJson)
