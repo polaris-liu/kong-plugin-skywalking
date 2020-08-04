@@ -22,7 +22,7 @@ local Client = {}
 -- Tracing timer reports instance properties report, keeps alive and sends traces
 -- After report instance properties successfully, it sends keep alive packages.
 function Client:startBackendTimer(backend_http_uri)
-    local metadata_buffer = ngx.shared.tracing_buffer
+    local metadata_buffer = ngx.shared.skywalking_tracing_buffer
 
     -- The codes of timer setup is following the OpenResty timer doc
     local delay = 3  -- in seconds
@@ -169,7 +169,7 @@ function Client:reportTraces(metadata_buffer, backend_http_uri)
     local DEBUG = ngx.DEBUG
     local ERR = ngx.ERR
 
-    local queue = ngx.shared.tracing_buffer
+    local queue = ngx.shared.skywalking_tracing_buffer
     local segment = queue:rpop('segment')
     local segmentTransform = ''
 
