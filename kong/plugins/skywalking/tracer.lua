@@ -20,7 +20,6 @@ local kong = kong
 local Tracer = {}
 
 function Tracer:start(config, correlation)
-    local metadata_buffer = ngx.shared.skywalking_tracing_buffer
     local TC = require('kong.plugins.skywalking.tracing_context')
     local Layer = require('kong.plugins.skywalking.span_layer')
 
@@ -84,9 +83,9 @@ function Tracer:prepareForReport()
             local segmentJson = require('cjson').encode(Segment.transform(segment))
             ngx.log(ngx.DEBUG, 'segment = ', segmentJson)
 
-            local queue = ngx.shared.skywalking_tracing_buffer
-            local length = queue:lpush('segment', segmentJson)
-            ngx.log(ngx.DEBUG, 'segment buffer size = ', queue:llen('segment'))
+            local queue = ngx.shared.kong_db_cache
+            local length = queue:lpush('sw_queue_segment', segmentJson)
+            ngx.log(ngx.DEBUG, 'segment buffer size = ', queue:llen('sw_queue_segment'))
         end
     end
 end

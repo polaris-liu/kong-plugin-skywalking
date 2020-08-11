@@ -23,22 +23,6 @@ local SkyWalkingHandler = {
   VERSION = "1.0.0",
 }
 
--- function SkyWalkingHandler:init_worker()
---   kong.log.debug("saying hi from the SkyWalkingHandler 'new' handler")
---   local metadata_buffer = ngx.shared.skywalking_tracing_buffer
---   local service_name = config.service_name
---   local service_instance_name = config.service_instance_name
---   local backend_http_uri = config.backend_http_uri
-
---   metadata_buffer:set('serviceName', service_name)
---   metadata_buffer:set('serviceInstanceName', service_instance_name)
-
---   sw_client:startBackendTimer(backend_http_uri) 
-
---   kong.log.debug('SkyWalkingHandler init ', metadata_buffer)
---   kong.log.debug('SkyWalkingHandler serverAddr ', backend_http_uri)
--- end
-
 function SkyWalkingHandler:access(config)
   kong.log.info('access phase of skywalking plugin')
   kong.ctx.plugin.skywalking_sample = false

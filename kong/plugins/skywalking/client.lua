@@ -24,11 +24,11 @@ local log = kong.log
 -- Tracing timer reports instance properties report, keeps alive and sends traces
 -- After report instance properties successfully, it sends keep alive packages.
 function Client:startBackendTimer(config)
-    local metadata_buffer = ngx.shared.skywalking_tracing_buffer
+    local metadata_buffer = ngx.shared.kong_db_cache
 
     local service_name = config.service_name
     local service_instance_name = config.service_instance_name
-    local heartbeat_timer = metadata_buffer:get('heartbeat_timer')
+    local heartbeat_timer = metadata_buffer:get('sw_heartbeat_timer')
 
     -- The codes of timer setup is following the OpenResty timer doc
     local delay = 3  -- in seconds
@@ -37,7 +37,7 @@ function Client:startBackendTimer(config)
 
     check = function(premature)
         if not premature then
-            local instancePropertiesSubmitted = metadata_buffer:get('instancePropertiesSubmitted')
+            local instancePropertiesSubmitted = metadata_buffer:get('sw_instancePropertiesSubmitted')
             if (instancePropertiesSubmitted == nil or instancePropertiesSubmitted == false) then
                 self:reportServiceInstance(metadata_buffer, config)
             else
@@ -61,7 +61,7 @@ function Client:startBackendTimer(config)
             log.err("failed to create timer: ", err)
             return
         end  
-        metadata_buffer:set('heartbeat_timer',true)
+        metadata_buffer:set('sw_heartbeat_timer',true)
         
     end
 end
@@ -95,7 +95,7 @@ function Client:reportServiceInstance(metadata_buffer, config)
         log.err("Instance report fails, uri:", uri, ", err:", err)
     elseif res.status == 200 then
         log.debug("Instance report, uri:", uri, ", response = ", res.body)
-        metadata_buffer:set('instancePropertiesSubmitted', true)
+        metadata_buffer:set('sw_instancePropertiesSubmitted', true)
     else
         log.err("Instance report fails, uri:", uri, ", response code ", res.status)
     end
@@ -167,8 +167,8 @@ end
 -- Report trace segments to the backend
 function Client:reportTraces(metadata_buffer, config)
 
-    local queue = ngx.shared.skywalking_tracing_buffer
-    local segment = queue:rpop('segment')
+    local queue = ngx.shared.kong_db_cache
+    local segment = queue:rpop('sw_queue_segment')
     local segmentTransform = ''
 
     local count = 0
@@ -181,7 +181,7 @@ function Client:reportTraces(metadata_buffer, config)
         end
 
         segmentTransform = segmentTransform .. segment
-        segment = queue:rpop('segment')
+        segment = queue:rpop('sw_queue_segment')
         count = count + 1
 
         if count >= SEGMENT_BATCH_COUNT then
