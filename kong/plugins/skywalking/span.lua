@@ -14,9 +14,8 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 --
-
+local timestamp = require "kong.tools.timestamp"
 local spanLayer = require("kong.plugins.skywalking.span_layer")
-local Util = require('kong.plugins.skywalking.util')
 local SegmentRef = require("kong.plugins.skywalking.segment_ref")
 
 local CONTEXT_CARRIER_KEY = 'sw8'
@@ -182,7 +181,7 @@ function _M.finish(span, endTime)
     end
 
     if endTime == nil then
-        span.end_time = Util.timestamp()
+        span.end_time = timestamp.get_utc()
     else
         span.end_time = endTime
     end

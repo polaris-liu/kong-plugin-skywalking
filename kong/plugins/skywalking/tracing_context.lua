@@ -15,7 +15,7 @@
 -- limitations under the License.
 --
 
-local Util = require('kong.plugins.skywalking.util')
+local k_utils = require "kong.tools.utils"
 local Span = require('kong.plugins.skywalking.span')
 local CorrelationContext = require('kong.plugins.skywalking.correlation_context')
 
@@ -113,7 +113,7 @@ function _M.new(serviceName, serviceInstanceName)
     end
 
     local tracing_context = {}
-    tracing_context.trace_id = Util.newID()
+    tracing_context.trace_id = k_utils.uuid()
     tracing_context.segment_id = tracing_context.trace_id
     tracing_context.service = serviceName
     tracing_context.service_instance = serviceInstanceName
