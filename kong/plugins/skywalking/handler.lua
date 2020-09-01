@@ -26,6 +26,11 @@ local SkyWalkingHandler = {
 function SkyWalkingHandler:access(config)
   kong.log.info('access phase of skywalking plugin')
   kong.ctx.plugin.skywalking_sample = false
+  -- set hostname to service_instance_name
+  local hostname = os.getenv("HOSTNAME")
+  if config.cluster_flag and hostname ~= nil then
+    config.service_instance_name = hostname
+  end
   if config.sample_ratio == 1 or math.random() * 10000 < config.sample_ratio then
       kong.ctx.plugin.skywalking_sample = true
       sw_client:startBackendTimer(config) 
