@@ -1,6 +1,6 @@
 package = "kong-plugin-skywalking" 
 
-version = "0.2.0-1" 
+version = "0.2.0-2" 
 
 local pluginName = "skywalking"
 

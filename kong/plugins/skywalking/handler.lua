@@ -23,13 +23,14 @@ local SkyWalkingHandler = {
   VERSION = "1.0.0",
 }
 
-function SkyWalkingHandler:access(config)
-  kong.log.info('access phase of skywalking plugin')
+function SkyWalkingHandler:rewrite(config)
+  kong.log.debug('rewrite phase of skywalking plugin')
   kong.ctx.plugin.skywalking_sample = false
+  config.service_instance_name = config.service_instance_prefix
   -- set hostname to service_instance_name
   local hostname = os.getenv("HOSTNAME")
-  if config.cluster_flag and hostname ~= nil then
-    config.service_instance_name = hostname
+  if hostname ~= nil then
+    config.service_instance_name = config.service_instance_name .. hostname
   end
   if config.sample_ratio == 1 or math.random() * 10000 < config.sample_ratio then
       kong.ctx.plugin.skywalking_sample = true
@@ -40,12 +41,14 @@ end
 
 function SkyWalkingHandler:body_filter(config)
   if kong.ctx.plugin.skywalking_sample and ngx.arg[2] then
+    kong.log.debug('body_filter phase of skywalking plugin')
     sw_tracer:finish()
   end
 end
 
 function SkyWalkingHandler:log(config)
   if kong.ctx.plugin.skywalking_sample then
+    kong.log.debug('log phase of skywalking plugin')
     sw_tracer:prepareForReport()
   end
 end
