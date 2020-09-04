@@ -15,23 +15,30 @@
 -- limitations under the License.
 --
 
+local socket = require('socket')
 local sw_client = require "kong.plugins.skywalking.client"
 local sw_tracer = require "kong.plugins.skywalking.tracer"
 
 local SkyWalkingHandler = {
   PRIORITY = 2001,
-  VERSION = "1.0.0",
+  VERSION = "0.2.0-2",
 }
 
 function SkyWalkingHandler:rewrite(config)
   kong.log.debug('rewrite phase of skywalking plugin')
   kong.ctx.plugin.skywalking_sample = false
-  config.service_instance_name = config.service_instance_prefix
+
   -- set hostname to service_instance_name
-  local hostname = os.getenv("HOSTNAME")
-  if hostname ~= nil then
-    config.service_instance_name = config.service_instance_name .. hostname
+  if config.instance_name_by_hostname_enable then
+    local hostname = socket.dns.gethostname()
+    local hostip,resolver = socket.dns.toip(hostname)
+    local instance_name = hostname .. "@" .. hostip
+    config.service_instance_name = instance_name
+  else
+    config.service_instance_name = config.instance_name
   end
+
+  -- set sample ratio
   if config.sample_ratio == 1 or math.random() * 10000 < config.sample_ratio then
       kong.ctx.plugin.skywalking_sample = true
       sw_client:startBackendTimer(config) 

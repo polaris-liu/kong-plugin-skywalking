@@ -26,7 +26,8 @@ return {
         fields = {
           { backend_http_uri = typedefs.url({ required = true }) },
           { service_name = { type = "string", default = "Kong Service", }, },
-          { service_instance_prefix = { type = "string", default = "", }, },
+          { instance_name_by_hostname_enable = { type = "boolean", default = false, }, },
+          { instance_name = { type = "string", default = "Kong Default Instance", }, },
           { sample_ratio = { type = "number", between = { 1 , 10000 }, default = 1 }, },
         },
       },
