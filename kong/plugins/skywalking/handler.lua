@@ -31,8 +31,13 @@ function SkyWalkingHandler:rewrite(config)
   -- set hostname to service_instance_name
   if config.instance_name_by_hostname_enable then
     local hostname = socket.dns.gethostname()
-    local hostip,resolver = socket.dns.toip(hostname)
-    local instance_name = hostname .. "@" .. hostip
+    -- add ip to service_instance_name
+    local instance_name = hostname
+    if config.instance_name_add_ip_enable then
+      local hostip,resolver = socket.dns.toip(hostname)
+      instance_name = instance_name .. "@" .. hostip
+    end
+
     config.service_instance_name = instance_name
   else
     config.service_instance_name = config.instance_name
