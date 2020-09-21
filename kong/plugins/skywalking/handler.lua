@@ -21,7 +21,7 @@ local sw_tracer = require "kong.plugins.skywalking.tracer"
 
 local SkyWalkingHandler = {
   PRIORITY = 2001,
-  VERSION = "0.2.0-2",
+  VERSION = "0.2.0-3",
 }
 
 function SkyWalkingHandler:rewrite(config)
