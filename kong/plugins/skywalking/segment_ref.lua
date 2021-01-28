@@ -34,25 +34,56 @@ local _M = {}
 function _M.new()
     return {
         type = 'CROSS_PROCESS',
+        network_address_id = 0,
+        entry_service_instance_id = 0,
+        parent_service_instance_id = 0,
+        entry_endpoint_id = 0,
+        parent_endpoint_id = 0,
     }
 end
 
--- Deserialize value from the propagated context and initialize the SegmentRef
-function _M.fromSW8Value(value)
-    local ref = _M.new()
-
-    local parts = k_utils.split(value, '-')
-    if #parts ~= 8 then
+-- Format a trace/segment id into an array.
+-- An official ID should have three parts separated by '.' and each part of it is a number
+function _M.formatID(str)
+    local parts = split(str, [[\.]])
+    if #parts ~= 3 then
         return nil
     end
 
-    ref.trace_id = decode_base64(parts[2])
-    ref.segment_id = decode_base64(parts[3])
+    return parts
+end
+
+function _M.fromSW6Value(value)
+    local ref = _M.new()
+
+    local parts = k_utils.split(value, '-')
+    if #parts ~= 9 then
+        return nil
+    end
+
+    ref.trace_id = formatID(decode_base64(parts[2]))
+    ref.segment_id = formatID(decode_base64(parts[3]))
     ref.span_id = tonumber(parts[4])
-    ref.parent_service = decode_base64(parts[5])
-    ref.parent_service_instance = decode_base64(parts[6])
-    ref.parent_endpoint = decode_base64(parts[7])
-    ref.address_used_at_client = decode_base64(parts[8])
+    ref.parent_service_instance_id = tonumber(parts[5])
+    ref.entry_service_instance_id = tonumber(parts[6])
+    local peerStr = decode_base64(parts[7])
+    if string.sub(peerStr, 1, 1) == '#' then
+        ref.network_address = string.sub(peerStr, 2)
+    else
+        ref.network_address_id = tonumber(peerStr)
+    end
+    local entryEndpointStr = decode_base64(parts[8])
+    if string.sub(entryEndpointStr, 1, 1) == '#' then
+        ref.entry_endpoint_name = string.sub(entryEndpointStr, 2)
+    else
+        ref.entry_endpoint_id = tonumber(entryEndpointStr)
+    end
+    local parentEndpointStr = decode_base64(parts[9])
+    if string.sub(parentEndpointStr, 1, 1) == '#' then
+        ref.parent_endpoint_name = string.sub(parentEndpointStr, 2)
+    else
+        ref.parent_endpoint_id = tonumber(parentEndpointStr)
+    end
 
     return ref
 end

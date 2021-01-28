@@ -23,18 +23,16 @@ function Tracer:start(config, correlation)
     local TC = require('kong.plugins.skywalking.tracing_context')
     local Layer = require('kong.plugins.skywalking.span_layer')
 
-    local tracingContext
-    local service_name = config.service_name
-    local service_instance_name = config.service_instance_name
-    tracingContext = TC.new(service_name, service_instance_name)
+    local serviceInstId = metadata_buffer:get("serviceInstId")
+    local serviceId = metadata_buffer:get('serviceId')
+    local tracingContext = TC.new(serviceId, serviceInstId)
 
     -- Constant pre-defined in SkyWalking main repo
     -- 6000 represents Nginx
     local nginxComponentId = 6000
 
     local contextCarrier = {}
-    contextCarrier["sw8"] = ngx.req.get_headers()["sw8"]
-    contextCarrier["sw8-correlation"] = ngx.req.get_headers()["sw8-correlation"]
+    contextCarrier["sw6"] = ngx.req.get_headers()["sw6"]
     local entrySpan = TC.createEntrySpan(tracingContext, ngx.var.uri, nil, contextCarrier)
     Span.start(entrySpan, ngx.now() * 1000)
     Span.setComponentId(entrySpan, nginxComponentId)
@@ -50,7 +48,7 @@ function Tracer:start(config, correlation)
 
     local upstreamServerName = kong.request.get_host()
     ------------------------------------------------------
-    local exitSpan = TC.createExitSpan(tracingContext, upstreamUri, entrySpan, upstreamServerName, contextCarrier, correlation)
+    local exitSpan = TC.createExitSpan(tracingContext, upstreamUri, entrySpan, upstreamServerName, contextCarrier)
     Span.start(exitSpan, ngx.now() * 1000)
     Span.setComponentId(exitSpan, nginxComponentId)
     Span.setLayer(exitSpan, Layer.HTTP)
