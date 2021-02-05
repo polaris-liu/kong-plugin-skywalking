@@ -18,52 +18,23 @@
 local _M = {}
 
 -- Return Services as service register parameter
-function _M.newServiceRegister(unRegisterServiceName)
-    local serv = {
-        services = {}
-    }
-
-    local service = {
-        serviceName = unRegisterServiceName,
-        -- Field type is optional, default value is `normal`
-        type = 'normal'
-    }
-
-    serv.services[#serv.services + 1] = service
-
-    return serv
-end
-
--- Return Services as service register parameter
-function _M.newServiceInstanceRegister(registeredServiceId, serviceInstUUID, registerTime)
-    local serviceInstances = {
-        instances = {}
-    }
-
+function _M.newReportInstanceProperties(serviceName, serviceInstance)
     local allProperties = {
         key = "language",
         value = "lua"
     }
 
-    local serviceInstance = {
-        serviceId = registeredServiceId,
-        instanceUUID = serviceInstUUID,
-        time = registerTime,
-        properties = {}
+    return {
+        service = serviceName,
+        serviceInstance = serviceInstance,
+        properties = {allProperties}
     }
-
-    serviceInstance.properties[#serviceInstance.properties + 1] = {allProperties}
-
-    serviceInstances.instances[#serviceInstances.instances + 1] = serviceInstance
-
-    return serviceInstances
 end
 
-function _M.newServiceInstancePingPkg(serviceInstanceId, serviceInstanceUUID, updateTime)
+function _M.newServiceInstancePingPkg(serviceName, serviceInstance)
     return {
-        serviceInstanceId = serviceInstanceId,
-        time = updateTime,
-        serviceInstanceUUID = serviceInstanceUUID,
+        service = serviceName,
+        serviceInstance = serviceInstance,
     }
 end
 
