@@ -15,8 +15,6 @@
 -- limitations under the License.
 --
 
-local timestamp = require "kong.tools.timestamp"
-
 local SEGMENT_BATCH_COUNT = 100
 
 local Client = {}
@@ -39,25 +37,14 @@ function Client:startBackendTimer(config)
 
     check = function(premature)
         if not premature then
-            local serviceId = metadata_buffer:get('serviceId')
-            if (serviceId == nil or serviceId == 0) then
-                self:registerService(metadata_buffer, config)
-            end
-
-            serviceId = metadata_buffer:get('serviceId')
-            if (serviceId ~= nil and serviceId ~= 0) then
-                local serviceInstId = metadata_buffer:get('serviceInstId')
-                if (serviceInstId == nil or serviceInstId == 0)  then
-                    self:registerServiceInstance(metadata_buffer, config)
-                end
-            end
-
-            -- After all register successfully, begin to send trace segments
-            local serviceInstId = metadata_buffer:get('serviceInstId')
-            if (serviceInstId ~= nil and serviceInstId ~= 0) then
-                self:reportTraces(metadata_buffer, config)
+            local instancePropertiesSubmitted = metadata_buffer:get('sw_instancePropertiesSubmitted')
+            if (instancePropertiesSubmitted == nil or instancePropertiesSubmitted == false) then
+                self:reportServiceInstance(metadata_buffer, config)
+            else
                 self:ping(metadata_buffer, config)
             end
+
+            self:reportTraces(metadata_buffer, config)
 
             -- do the health check
             local ok, err = new_timer(delay, check)
@@ -79,55 +66,13 @@ function Client:startBackendTimer(config)
     end
 end
 
--- Register service
-function Client:registerService(metadata_buffer, config)
+function Client:reportServiceInstance(metadata_buffer, config)
 
-    local serviceName = config.service_name
-
-    local cjson = require('cjson')
-    local serviceRegister = require("kong.plugins.skywalking.management").newServiceRegister(serviceName)
-    local serviceRegisterParam = cjson.encode(serviceRegister)
-
-    local http = require('resty.http')
-    local httpc = http.new()
-    local res, err = httpc:request_uri(config.backend_http_uri .. '/v2/service/register', {
-        method = "POST",
-        body = serviceRegisterParam,
-        headers = {
-            ["Content-Type"] = "application/json",
-        },
-    })
-
-    if not res then
-        log(ERR, "Service register fails, " .. err)
-    elseif res.status == 200 then
-        log(DEBUG, "Service register response = " .. res.body)
-        local registerResults = cjson.decode(res.body)
-
-        for i, result in ipairs(registerResults)
-        do
-            if result.key == serviceName then
-                local serviceId = result.value
-                log(DEBUG, "Service registered, service id = " .. serviceId)
-                metadata_buffer:set('serviceId', serviceId)
-            end
-        end
-    else
-        log(ERR, "Service register fails, response code " .. res.status)
-    end
-end
-
-function Client:registerServiceInstance(metadata_buffer, config)
-
-    local service_id = metadata_buffer:get("serviceId")
-    local serviceInstName = 'NAME:' .. config.service_instance_name
-    metadata_buffer:set('serviceInstanceUUID', serviceInstName)
+    local service_name = config.service_name
+    local service_instance_name = config.service_instance_name
 
     local cjson = require('cjson')
-    local reportInstance = require("kong.plugins.skywalking.management").newServiceInstanceRegister(
-        service_id, 
-        serviceInstName,
-        timestamp.get_utc())
+    local reportInstance = require("kong.plugins.skywalking.management").newReportInstanceProperties(service_name, service_instance_name)
     local reportInstanceParam, err = cjson.encode(reportInstance)
     if err then
         log.err("Request to report instance fails, ", err)
@@ -136,7 +81,7 @@ function Client:registerServiceInstance(metadata_buffer, config)
 
     local http = require('resty.http')
     local httpc = http.new()
-    local uri = config.backend_http_uri .. '/v2/instance/register'
+    local uri = config.backend_http_uri .. '/v3/management/reportProperties'
 
     local res, err = httpc:request_uri(uri, {
         method = "POST",
@@ -147,10 +92,10 @@ function Client:registerServiceInstance(metadata_buffer, config)
     })
 
     if not res then
-        log.err("Service Instance register fails, uri:", uri, ", err:", err)
+        log.err("Instance report fails, uri:", uri, ", err:", err)
     elseif res.status == 200 then
-        log.debug("Service Instance report, uri:", uri, ", response = ", res.body)
-        metadata_buffer:set('serviceInstId', serviceId)
+        log.debug("Instance report, uri:", uri, ", response = ", res.body)
+        metadata_buffer:set('sw_instancePropertiesSubmitted', true)
     else
         log.err("Instance report fails, uri:", uri, ", response code ", res.status)
     end
@@ -158,11 +103,12 @@ end
 
 -- Ping the backend to update instance heartheat
 function Client:ping(metadata_buffer, config)
+
+    local service_name = config.service_name
+    local service_instance_name = config.service_instance_name
+
     local cjson = require('cjson')
-    local pingPkg = require("kong.plugins.skywalking.management").newServiceInstancePingPkg(
-        metadata_buffer:get('serviceInstId'),
-        metadata_buffer:get('serviceInstanceUUID'),
-        timestamp.get_utc())
+    local pingPkg = require("kong.plugins.skywalking.management").newServiceInstancePingPkg(service_name, service_instance_name)
     local pingPkgParam, err = cjson.encode(pingPkg)
     if err then
         log.err("Agent ping fails, ", err)
@@ -170,7 +116,7 @@ function Client:ping(metadata_buffer, config)
 
     local http = require('resty.http')
     local httpc = http.new()
-    local uri = config.backend_http_uri .. '/v2/instance/heartbeat'
+    local uri = config.backend_http_uri .. '/v3/management/keepAlive'
 
     local res, err = httpc:request_uri(uri, {
         method = "POST",
@@ -195,7 +141,7 @@ local function sendSegments(segmentTransform, backend_http_uri)
     local http = require('resty.http')
     local httpc = http.new()
 
-    local uri = backend_http_uri .. '/v2/segments'
+    local uri = backend_http_uri .. '/v3/segments'
 
     local res, err = httpc:request_uri(uri, {
         method = "POST",
