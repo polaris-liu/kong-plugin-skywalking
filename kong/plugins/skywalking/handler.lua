@@ -45,6 +45,9 @@ function SkyWalkingHandler:body_filter(config)
 end
 
 function SkyWalkingHandler:log(config)
+  if string.upper(ngx.req.get_method()) =='HEAD' then
+    sw_tracer:finish()
+  end
   if kong.ctx.plugin.skywalking_sample then
     sw_tracer:prepareForReport()
   end
